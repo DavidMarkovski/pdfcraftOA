@@ -372,7 +372,7 @@ impl Certificate {
             ))
         } else if !self.unknown_critical.is_empty() {
             Some(Detail::of(
-                "The signer's certificate has critical extensions PdfCraft does not recognize ({}).",
+                "The signer's certificate has critical extensions Optimised PDF does not recognize ({}).",
                 Fill::Value(self.unknown_critical.join(", ")),
             ))
         } else {

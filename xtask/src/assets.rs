@@ -36,10 +36,11 @@ pub const ALLOWED_LICENCES: &[&str] = &[
 ];
 
 /// The closed list of Adobe-authored, non-visual technical data (AGENTS.md §1.1): (crate, path).
-/// Storyteller's own brand marks (the ArtCraft name and logos): shipped in the app and docs, but
-/// not licensed for reuse by forks. Allowed only for `kind = "logo"` entries under `docs/brand/`
+/// Optimised Accounting's own brand mark (Optimised PDF fork): shipped in the app and docs, but
+/// not licensed for reuse. Allowed only for `kind = "logo"` entries under `docs/brand/` and for
+/// the app icon (`kind = "icon"` under `assets/app-icon/`, every file drawn from the mark)
 /// (AGENTS.md §1.2).
-pub const BRAND_LICENCE: &str = "LicenseRef-Storyteller-Trademark";
+pub const BRAND_LICENCE: &str = "LicenseRef-OptimisedAccounting-Trademark";
 
 pub const ADOBE_DATA_ALLOWED: &[(&str, &str)] = &[("hayro-cmap", "assets/cmaps.brotli"), ("hayro-interpret", "src/font/generated/metrics.rs")];
 
@@ -235,7 +236,8 @@ pub fn check(root: &Path, m: &Manifest, repo_files: &[String], lock: &BTreeSet<(
         if !seen.insert(a.path.clone()) {
             problems.push(format!("{}: listed twice", a.path));
         }
-        let brand = a.licence == BRAND_LICENCE && a.kind == "logo" && a.path.starts_with("docs/brand/");
+        let brand = a.licence == BRAND_LICENCE
+            && ((a.kind == "logo" && a.path.starts_with("docs/brand/")) || (a.kind == "icon" && a.path.starts_with("assets/app-icon/")));
         if !brand {
             licence_ok(&a.path, &a.licence, &mut problems);
         }
@@ -547,12 +549,15 @@ mod tests {
     fn brand_licence_only_for_brand_logos() {
         let root = super::root();
         for (path, kind, pass) in [
-            ("docs/brand/artcraft-mark.svg", "logo", true),
-            ("docs/brand/artcraft-mark.svg", "icon", false),
+            ("docs/brand/optimised-pdf-mark.svg", "logo", true),
+            ("docs/brand/optimised-pdf-mark.svg", "icon", false),
+            ("assets/app-icon/pdfcraft.svg", "icon", true),
+            ("assets/app-icon/pdfcraft.svg", "image", false),
             ("assets/icons/mark.svg", "logo", false),
+            ("assets/icons/mark.svg", "icon", false),
         ] {
-            let mut a = asset(path, "Storyteller", kind, BRAND_LICENCE);
-            a.licence_file = "docs/brand/LICENSE-brand.txt".into();
+            let mut a = asset(path, "Optimised Accounting Pty Ltd", kind, BRAND_LICENCE);
+            a.licence_file = "docs/brand/LICENSE-optimised-accounting.txt".into();
             let m = Manifest { asset: vec![a], ..Default::default() };
             let p = check(&root, &m, &[], &BTreeSet::new());
             assert_eq!(p.iter().all(|p| !p.contains("allowlist")), pass, "{path} {kind}: {p:?}");
