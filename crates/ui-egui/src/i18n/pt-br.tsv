@@ -1889,7 +1889,6 @@
 	The title in the metadata and the document information differ	O título nos metadados e nas informações do documento são diferentes
 	the title must not be empty	o título não deve estar vazio
 	there are no pages to print	não há páginas para imprimir
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	este documento está assinado: regravá-lo invalidaria suas assinaturas (salve de forma incremental)
 	this file isn't XFDF, FDF, XML or text form data	este arquivo não é XFDF, FDF, XML ou dados de formulário de texto
 	This page couldn't be displayed.\n{e}	Não foi possível exibir esta página.\n{e}
 	Type your {what}.	Digite seu(sua) {what}.

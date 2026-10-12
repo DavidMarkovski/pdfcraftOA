@@ -21,14 +21,18 @@ Each open document holds a `pdfcraft_cos::Document`: the object graph plus a cop
    share all unchanged data, so a snapshot is cheap — this is what makes 100 levels of undo
    affordable on a 200 MB file.
 2. After every edit the **working file** is produced by an incremental write: the original bytes
-   plus one appended revision.
-3. The view is refreshed from those bytes, so **what you see is exactly what Save will write**.
-4. Saving rebases onto the written bytes, so the next save appends only new edits.
+   plus one appended revision. It exists in memory (and in autosave recovery snapshots) only.
+3. The view is refreshed from those bytes, so what you see is the document Save will write.
+4. **Save writes a full rewrite** of the objects reachable from the current document, never the
+   working file: its earlier revision still holds what edits removed (Optimised Accounting fork).
+   The rewrite is checked to reopen as one revision with the same encryption before it is handed
+   out, and saving rebases onto it.
 
-Consequences worth preserving: the original bytes of an opened file are never rewritten in place; a
-full rewrite happens only where it must (redaction, PDF/A conversion, print imposition, a changed
-password); and unknown data survives a round trip because nothing is reconstructed that wasn't
-understood.
+Consequences worth preserving: unknown data survives a round trip because nothing is reconstructed
+that wasn't understood; an encrypted document is never saved unencrypted unless its protection was
+removed on purpose; and a signed document with changes is not saved unless the caller accepts that
+its signatures become invalid (`SignedSave::InvalidateSignatures`). Signing an unsigned document
+signs over a full rewrite of it.
 
 ## API
 
@@ -44,8 +48,9 @@ let doc = s.get(id).ok_or("gone")?;                         // &Document: querie
 doc.can_undo(); doc.editable(); doc.allows_printing();
 doc.text_blocks(page); doc.page_boxes(page); doc.security_summary();
 
-let bytes = s.save_bytes(id)?;        // incremental: keeps signatures over earlier revisions valid
-let bytes = s.save_full_bytes(id)?;   // full rewrite, garbage-collected
+let bytes = s.save_bytes(id)?;        // full rewrite; a signed document with changes is refused
+let bytes = s.save_bytes_with(id, SignedSave::InvalidateSignatures)?; // rewrite it anyway
+let bytes = s.save_full_bytes(id)?;   // full rewrite; refuses any signed document
 s.mark_saved(id, bytes.clone(), path)?;
 ```
 

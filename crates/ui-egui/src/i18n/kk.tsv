@@ -1722,7 +1722,6 @@
 	no such document	мұндай құжат жоқ
 	nothing to undo	болдырмауға ештеңе жоқ
 	nothing to redo	қайталауға ештеңе жоқ
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	бұл құжат қол қойылған: қайта жазу оның қолтаңбаларын жарамсыз етеді (орнына қосымша сақтаңыз)
 	the document is protected by a password	құжат құпиясөзбен қорғалған
 	the password is incorrect	құпиясөз дұрыс емес
 	the document has no page tree	құжатта беттер ағашы жоқ

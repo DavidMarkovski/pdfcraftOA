@@ -1794,7 +1794,6 @@
 	no such document	找不到此文件
 	nothing to undo	沒有可復原的操作
 	nothing to redo	沒有可重做的操作
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	此文件已簽署：重寫檔案會使簽章失效，請改用增量儲存
 	the document is protected by a password	此文件受密碼保護
 	the password is incorrect	密碼不正確
 	the document has no page tree	此文件沒有頁面樹

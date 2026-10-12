@@ -366,7 +366,8 @@ fn page_list(s: &str) -> Result<Vec<usize>, String> {
 /// The options `edit` understands, for its "unknown option" message.
 const EDIT_OPTIONS: &str = "--out, --password, --full, --rotate, --delete, --move, --insert-blank, --title, --author";
 
-/// Apply page and metadata edits through the engine and save (incrementally unless `--full`).
+/// Apply page and metadata edits through the engine and save: always a full rewrite, written
+/// atomically (`--full` is accepted for compatibility and changes nothing).
 ///
 /// Every argument is parsed before the file is opened: an option this command does not know
 /// (a typo like `--rotat`) is an error, not something to skip — skipping it would write an
@@ -376,14 +377,12 @@ fn edit(args: &[String]) -> Result<(), CliError> {
     let mut path: Option<&str> = None;
     let mut out: Option<&str> = None;
     let mut password: Option<&str> = None;
-    let mut full = false;
     let mut edits = Vec::new();
     let mut i = 0;
     while let Some(arg) = args.get(i).map(String::as_str) {
         // Options that take no value, and the input file.
         match arg {
             "--full" => {
-                full = true;
                 i += 1;
                 continue;
             }
@@ -428,8 +427,33 @@ fn edit(args: &[String]) -> Result<(), CliError> {
     for e in edits {
         session.apply(id, e).map_err(|e| e.to_string())?;
     }
-    let bytes = if full { session.save_full_bytes(id) } else { session.save_bytes(id) }.map_err(|e| e.to_string())?;
-    std::fs::write(out, bytes.as_slice()).map_err(|e| format!("{out}: {e}").into())
+    let bytes = session.save_bytes(id).map_err(|e| e.to_string())?;
+    write_atomically(Path::new(out), bytes.as_slice()).map_err(|e| format!("{out}: {e}").into())
+}
+
+/// Write `bytes` to a new, unpredictably named file beside `path`, flush and read it back, then
+/// rename it over `path`: an existing file there is replaced only by the complete output, never
+/// truncated or half-written. The staged file is removed on failure.
+fn write_atomically(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use pdfcraft_platform::staging::{StagingName, create_staging, staging_suffixes};
+    use std::io::Write;
+    let dir = path.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let name = path.file_name().ok_or_else(|| std::io::Error::other("not a file path"))?.to_string_lossy();
+    let (tmp, file) = create_staging(dir, &name, StagingName::TagThenSuffix, staging_suffixes())?;
+    let staged = (|| {
+        let mut file = file;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        drop(file);
+        if std::fs::read(&tmp)? != bytes {
+            return Err(std::io::Error::other("the file written differs from what was saved"));
+        }
+        std::fs::rename(&tmp, path)
+    })();
+    if staged.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    staged
 }
 
 fn file_stem(path: &str) -> String {

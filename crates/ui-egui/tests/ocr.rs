@@ -62,7 +62,8 @@ fn recognize_text_in_multiple_files_writes_searchable_copies() {
     assert!(toast.starts_with("Recognized ") && toast.ends_with("in 2 files"), "{toast}");
     for name in ["one.pdf", "two.pdf"] {
         let bytes = std::fs::read(dir.join(name)).unwrap();
-        assert!(bytes.len() > scan().len(), "an incremental update was appended");
+        let saved = pdfcraft_cos::Document::open(std::sync::Arc::new(bytes)).unwrap();
+        assert_eq!(saved.revisions().len(), 1, "written as a full rewrite");
     }
 }
 

@@ -905,7 +905,9 @@ pub(crate) fn is_mail_temp_copy(path: &str) -> bool {
 }
 
 /// Write via a temporary file in the same directory and rename over the target, so a crash or
-/// full disk never leaves a half-written PDF where the original was.
+/// full disk never leaves a half-written PDF where the original was. The temporary file is
+/// flushed, closed and read back before the rename: the target is replaced only by exactly
+/// `bytes` (which Save has already checked reopen as a PDF), and is left alone on any failure.
 pub fn write_atomically(path: &str, bytes: &[u8]) -> std::io::Result<()> {
     write_atomically_with(path, bytes, staging_suffixes())
 }
@@ -923,6 +925,9 @@ fn write_atomically_with(path: &str, bytes: &[u8], suffixes: impl IntoIterator<I
             let mut f = f;
             f.write_all(bytes)?;
             f.sync_all()?;
+        }
+        if std::fs::read(&tmp)? != bytes {
+            return Err(std::io::Error::other("the file written differs from what was saved"));
         }
         std::fs::rename(&tmp, target)
     })();

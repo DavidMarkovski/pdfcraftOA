@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use pdfcraft_engine::{CombineSource, DocId, Document, Edit, Session, commands};
+use pdfcraft_engine::{CombineSource, DocId, Document, Edit, Session, SignedSave, commands};
 use pdfcraft_platform::staging::{StagingName, create_staging, staging_suffixes};
 use pdfcraft_render::{PageRenderer, PageText, RenderConfig, RenderRequest, RequestKind};
 use serde_json::{Value, json};
@@ -750,18 +750,22 @@ impl Automation {
             Some(p) => self.resolve(p, true)?,
             None => PathBuf::from(doc.path.clone().ok_or_else(|| failed("the document has never been saved: pass a path"))?),
         };
-        let same_file = doc.path.as_deref().is_some_and(|p| Path::new(p) == target);
-        // Saving to a new file is a full rewrite unless asked otherwise, like Save As.
-        let full = a.opt_bool("full")?.unwrap_or(!same_file);
+        // Every save is a full rewrite, in place or to a new path: an incremental update would
+        // keep earlier revisions holding what edits removed. Asking for one is refused rather
+        // than quietly ignored.
+        if a.opt_bool("full")? == Some(false) {
+            return Err(failed("incremental saves are disabled: every save is a full rewrite (omit full, or pass true)"));
+        }
+        let signed = if a.opt_bool("invalidate_signatures")?.unwrap_or(false) { SignedSave::InvalidateSignatures } else { SignedSave::Refuse };
         let flatten_fill_sign = a.opt_bool("flatten_fill_sign")?.unwrap_or(false);
         if flatten_fill_sign {
             self.apply(a, Edit::FlattenFillSign)?;
         }
-        let bytes = if full { self.session.save_full_bytes(id) } else { self.session.save_bytes(id) }.map_err(failed)?;
+        let bytes = self.session.save_bytes_with(id, signed).map_err(failed)?;
         write_atomic(&target, &bytes)?;
         let path = target.to_string_lossy().into_owned();
         self.session.mark_saved(id, bytes.clone(), Some(path.clone())).map_err(failed)?;
-        Ok(json!({ "path": path, "bytes": bytes.len(), "incremental": !full, "document": summary(self.doc(a)?) }))
+        Ok(json!({ "path": path, "bytes": bytes.len(), "incremental": false, "document": summary(self.doc(a)?) }))
     }
 
     fn doc_revisions(&mut self, a: &Args) -> Result<Value> {
@@ -2085,11 +2089,13 @@ fn write_atomic_with(path: &Path, bytes: &[u8], suffixes: impl IntoIterator<Item
     std::fs::create_dir_all(dir).map_err(|e| failed(format!("{}: {e}", dir.display())))?;
     let (tmp, file) =
         create_staging(dir, &name.to_string_lossy(), StagingName::SuffixThenTag, suffixes).map_err(|e| failed(format!("{}: {e}", dir.display())))?;
-    // Closed at the end of the block, before the rename.
+    // Closed at the end of the block, before the rename. Read back before replacing anything:
+    // the destination changes only once the staged file is complete and exactly `bytes`.
     let written = {
         let mut file = file;
-        file.write_all(bytes)
-    };
+        file.write_all(bytes).and_then(|()| file.sync_all())
+    }
+    .and_then(|()| verify_staged(&tmp, bytes));
     if let Err(e) = written {
         let _ = std::fs::remove_file(&tmp);
         return Err(failed(format!("{}: {e}", tmp.display())));
@@ -2098,6 +2104,11 @@ fn write_atomic_with(path: &Path, bytes: &[u8], suffixes: impl IntoIterator<Item
         let _ = std::fs::remove_file(&tmp);
         failed(format!("{}: {e}", path.display()))
     })
+}
+
+/// The staged file at `tmp` holds exactly `bytes` (nothing short, nothing corrupted).
+fn verify_staged(tmp: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    if std::fs::read(tmp)? == bytes { Ok(()) } else { Err(std::io::Error::other("the file written differs from what was saved")) }
 }
 
 #[cfg(test)]

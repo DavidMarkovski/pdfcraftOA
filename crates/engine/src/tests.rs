@@ -244,27 +244,31 @@ fn failed_edit_changes_nothing() {
 }
 
 #[test]
-fn save_is_incremental_stamps_mod_date_and_rebases() {
+fn save_is_a_full_rewrite_stamps_mod_date_and_rebases() {
     let (mut s, id) = session_with(2);
     let original = s.get(id).unwrap().bytes.clone();
     s.apply(id, Edit::SetInfo { key: "Title".into(), value: "Quarterly report".into() }).unwrap();
     let saved = s.save_bytes(id).unwrap();
-    assert_eq!(&saved[..original.len()], &original[..], "incremental save keeps the original bytes");
-    let text = String::from_utf8_lossy(&saved[original.len()..]);
-    assert!(text.contains("/ModDate (D:20231114221320Z)"), "mod date stamped: {text}");
+    assert!(!saved.starts_with(&original), "a full rewrite, not an update appended to the original");
+    let written = pdfcraft_cos::Document::open(saved.clone()).unwrap();
+    assert_eq!(written.revisions().len(), 1);
+    let info = written.trailer().reference(b"Info").map(|r| written.get(r)).unwrap();
+    let mod_date = info.as_dict().and_then(|d| d.get(b"ModDate")).and_then(|d| d.as_string()).map(|d| d.to_text());
+    assert_eq!(mod_date.as_deref(), Some("D:20231114221320Z"), "mod date stamped");
     s.mark_saved(id, saved.clone(), Some("/tmp/out/report.pdf".into())).unwrap();
     let doc = s.get(id).unwrap();
     assert!(!doc.dirty);
     assert_eq!(doc.name, "report.pdf");
     assert_eq!(doc.info_value("Title").as_deref(), Some("Quarterly report"));
     assert_eq!(doc.info.title.as_deref(), Some("Quarterly report"));
-    // Saving again without edits writes the same bytes; a later edit appends just one revision.
+    // Saving again without edits writes the same bytes; after a later edit the file is
+    // rewritten again, still one revision.
     assert_eq!(s.save_bytes(id).unwrap(), saved);
     s.apply(id, Edit::RotatePages { pages: vec![1], degrees: -90 }).unwrap();
     let second = s.save_bytes(id).unwrap();
-    assert_eq!(&second[..saved.len()], &saved[..]);
+    assert!(!second.starts_with(&saved));
     let reopened = pdfcraft_cos::Document::open(second).unwrap();
-    assert_eq!(reopened.revisions().len(), 3);
+    assert_eq!(reopened.revisions().len(), 1);
 }
 
 #[test]
@@ -284,7 +288,8 @@ fn full_save_is_readable_and_smaller_after_deletes() {
     let (mut s, id) = session_with(5);
     s.apply(id, Edit::DeletePages { pages: vec![0, 1, 2] }).unwrap();
     let full = s.save_full_bytes(id).unwrap();
-    assert!(full.len() < s.save_bytes(id).unwrap().len());
+    assert!(full.len() < s.get(id).unwrap().bytes.len(), "smaller than the working file with its history");
+    assert_eq!(full, s.save_bytes(id).unwrap(), "Save writes the same rewrite");
     let mut s2 = Session::new();
     let id2 = s2.open("full.pdf", None, full, None).unwrap();
     assert_eq!(page_texts(&s2, id2), ["Page 4", "Page 5"]);
@@ -656,7 +661,7 @@ fn encrypted_documents_open_edit_and_save_encrypted() {
     assert!(s.get(id).unwrap().info.encrypted, "reported as encrypted");
     s.apply(id, Edit::RotatePages { pages: vec![0], degrees: 90 }).unwrap();
     let saved = s.save_bytes(id).unwrap();
-    assert_eq!(&saved[..bytes.len()], &bytes[..], "incremental");
+    assert!(!saved.starts_with(&bytes), "a full rewrite");
     assert!(pdfcraft_cos::Document::open(saved.clone()).is_err(), "still protected after saving");
     let mut s2 = Session::new();
     let id2 = s2.open("x.pdf", None, saved, Some("pw")).unwrap();
@@ -1040,7 +1045,8 @@ fn saving_a_password_protected_document_rebases_on_it() {
     assert!(!s.get(id).unwrap().dirty);
     s.apply(id, Edit::RotatePages { pages: vec![1], degrees: 90 }).unwrap();
     let again = s.save_bytes(id).unwrap();
-    assert_eq!(&again[..saved.len()], &saved[..], "the next save appends");
+    assert!(!again.starts_with(&saved), "the next save is a full rewrite too");
+    assert_eq!(pdfcraft_cos::Document::open_with_password(again, Some("pw")).unwrap().revisions().len(), 1);
 }
 
 fn protection(open: Option<&str>, perms: Option<&str>) -> Protection {
@@ -1712,7 +1718,7 @@ fn flattening_fill_and_sign_is_refused_without_permission_to_change() {
 }
 
 #[test]
-fn flattening_fill_and_sign_on_a_signed_file_stays_incremental() {
+fn flattening_fill_and_sign_on_a_signed_file_is_not_saved_over_the_signature() {
     let p12 = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../sign/tests/data/ec-p256.p12")).unwrap();
     let digital_id = sign::pkcs12::open(&p12, "test").unwrap();
     let mut s = Session::new().with_clock(|| 1_800_000_000);
@@ -1722,9 +1728,10 @@ fn flattening_fill_and_sign_on_a_signed_file_stays_incremental() {
     s.mark_signed(id, signed.clone(), None).unwrap();
     s.apply(id, fill_item(Shape::Typewriter { rect: [20.0, 200.0, 120.0, 220.0], font_size: 10.0 }, "Hello")).unwrap();
     s.apply(id, Edit::FlattenFillSign).unwrap();
-    let saved = s.save_bytes(id).unwrap();
-    assert!(saved.starts_with(signed.as_ref()), "the signature's bytes stay an incremental update");
     assert!(!comment_text(&s, id).contains(&"Hello".to_string()));
+    // Saving rewrites the file, which would invalidate the signature: refused unless accepted.
+    assert_eq!(s.save_bytes(id).unwrap_err(), EditError::Signed);
+    assert!(!s.save_bytes_with(id, SignedSave::InvalidateSignatures).unwrap().starts_with(signed.as_ref()));
 }
 
 #[test]
@@ -2003,14 +2010,13 @@ fn signing_saving_trusting_and_commenting_afterwards() {
     let sig = &s.get(id).unwrap().signatures[0];
     let comments = sign::Modification::Allowed(vec![sign::kind::COMMENTS]);
     assert_eq!((sig.status, sig.modification.clone()), (SignatureStatus::Valid, comments));
-    // Saving keeps the signature (incremental).
-    let saved = s.save_bytes(id).unwrap();
-    s.mark_saved(id, saved, None).unwrap();
-    assert_eq!(s.get(id).unwrap().signatures[0].status, SignatureStatus::Valid);
+    // Saving rewrites the file, which would invalidate the signature: refused.
+    assert_eq!(s.save_bytes(id).unwrap_err(), EditError::Signed);
+    assert_eq!(s.get(id).unwrap().signatures[0].status, SignatureStatus::Valid, "nothing was written");
     // Edits that would need a full rewrite are refused, and change nothing.
     let before = s.get(id).unwrap().can_undo().map(str::to_owned);
     assert!(matches!(s.apply(id, Edit::Sanitize), Err(EditError::SignedRewrite(_))));
-    assert!(!s.get(id).unwrap().dirty && s.get(id).unwrap().can_undo().map(str::to_owned) == before);
+    assert!(s.get(id).unwrap().can_undo().map(str::to_owned) == before);
 }
 
 #[test]
@@ -2531,7 +2537,7 @@ fn measurement_edits_are_transactional_and_honour_annotation_permissions() {
 }
 
 #[test]
-fn dynamic_xfa_forms_are_laid_out_on_open_filled_and_saved_incrementally() {
+fn dynamic_xfa_forms_are_laid_out_on_open_filled_and_saved() {
     let original = Arc::new(pdfcraft_xfa::fixtures::shell(&pdfcraft_xfa::fixtures::template(3)));
     let mut s = Session::new().with_clock(|| 1_700_000_000);
     let id = s.open("form.pdf", None, original.clone(), None).expect("opens");
@@ -2550,12 +2556,12 @@ fn dynamic_xfa_forms_are_laid_out_on_open_filled_and_saved_incrementally() {
     let answer = doc.form.iter().find(|f| f.name == "answer").unwrap();
     assert_eq!(answer.widgets.iter().filter_map(|w| w.on_state.clone()).collect::<Vec<_>>(), ["Y", "N"]);
     assert!(page_texts(&s, id)[0].contains("Sample Form"), "{:?}", page_texts(&s, id));
-    // Fill it in and save: one more incremental revision on top.
+    // Fill it in and save: a full rewrite.
     s.apply(id, Edit::SetFieldValue { name: "familyName".into(), value: FieldValue::Text("Singh".into()) }).unwrap();
     s.apply(id, Edit::SetFieldValue { name: "answer".into(), value: FieldValue::Radio(Some("N".into())) }).unwrap();
     assert!(s.get(id).unwrap().dirty);
     let saved = s.save_bytes(id).unwrap();
-    assert!(saved.starts_with(&original[..]));
+    assert!(!saved.starts_with(&original[..]));
     // The datasets packet carries the values too, for Adobe's viewers.
     let cos = pdfcraft_cos::Document::open(saved.clone()).unwrap();
     let data = pdfcraft_xfa::parse_datasets(&pdfcraft_xfa::read_packets(&cos).unwrap().unwrap().xdp).expect("a datasets packet");
@@ -3357,7 +3363,7 @@ fn mixed_object_moves_are_one_undo_step_and_survive_save_reopen() {
         }
     }
     let moved = s.save_bytes(id).unwrap();
-    assert!(moved.starts_with(saved.as_ref()), "an incremental update preserves the original revision");
+    assert!(!moved.starts_with(saved.as_ref()), "a full rewrite: the original revision is not kept");
     let mut again = Session::new();
     let other = again.open("moved.pdf", None, moved.clone(), None).unwrap();
     assert_eq!(again.get(other).unwrap().editable_objects(0).unwrap(), after);

@@ -1787,7 +1787,6 @@
 	no such document	brak takiego dokumentu
 	nothing to undo	brak operacji do cofnięcia
 	nothing to redo	brak operacji do ponowienia
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	ten dokument jest podpisany: zapisanie go na nowo unieważniłoby podpisy (zamiast tego zapisz przyrostowo)
 	the document is protected by a password	dokument jest chroniony hasłem
 	the password is incorrect	hasło jest nieprawidłowe
 	the document has no page tree	dokument nie ma drzewa stron
