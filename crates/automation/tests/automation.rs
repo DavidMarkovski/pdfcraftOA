@@ -157,14 +157,17 @@ fn edit_undo_redo_and_save_round_trip() {
     assert_eq!(info["pages"][0]["rotation"], 90);
     assert_eq!(page_text(&mut b, re), ["Page 3", "Page 2", "Page 1", ""]);
 
-    // Saving in place appends an incremental update.
+    // Saving in place is a full rewrite too: no update is appended to the file.
     ok(&mut b, "doc_set_info", json!({ "doc": re, "key": "Author", "value": "Agent" }));
-    let before = std::fs::metadata(dir.join("out/edited.pdf")).unwrap().len();
     let again = ok(&mut b, "doc_save", json!({ "doc": re }));
-    assert_eq!(again["incremental"], true);
+    assert_eq!(again["incremental"], false);
     let after = std::fs::read(dir.join("out/edited.pdf")).unwrap();
-    assert!(after.len() as u64 > before);
-    assert_eq!(after.windows(5).filter(|w| w == b"%%EOF").count(), 2);
+    assert_eq!(after.windows(5).filter(|w| w == b"%%EOF").count(), 1);
+    // Asking for an incremental update is refused, not quietly ignored.
+    match b.call("doc_save", &json!({ "doc": re, "full": false })) {
+        Err(ToolError::Failed(m)) => assert!(m.contains("incremental saves are disabled"), "{m}"),
+        other => panic!("full: false must be refused: {other:?}"),
+    }
 }
 
 /// #569: images and text files combine with PDFs, each made into a PDF first.
@@ -1239,7 +1242,11 @@ fn signing_an_encrypted_form_through_tools() {
     assert_eq!((r["signature"]["signer"].as_str(), r["signature"]["status"].as_str()), (Some("Ada Lovelace"), Some("unknown")));
     let original = std::fs::read(dir.join("form.pdf")).unwrap();
     let signed = std::fs::read(dir.join("signed.pdf")).unwrap();
-    assert!(signed.starts_with(&original), "an incremental update");
+    // form.pdf was itself written by a (deterministic) full rewrite, so rewriting it again before
+    // signing gives the same bytes: the signature is one incremental update on top.
+    assert!(signed.starts_with(&original), "signed over the rewritten file");
+    let revisions = pdfcraft_cos::Document::open_with_password(std::sync::Arc::new(signed.clone()), None).unwrap().revisions().len();
+    assert_eq!(revisions, 2, "the rewritten file, then the signature's incremental update");
     let mut c = auto(&dir);
     let re = ok(&mut c, "doc_open", json!({ "path": "signed.pdf" }))["doc"].as_u64().unwrap();
     assert_eq!(ok(&mut c, "doc_info", json!({ "doc": re }))["security"]["protected"], true, "still encrypted");
@@ -3222,19 +3229,29 @@ fn digital_ids_signing_and_validation_through_tools() {
     ok(&mut a, "comment_add", json!({ "doc": doc, "page": 1, "type": "note", "at": [20, 20], "contents": "ok" }));
     let s = &ok(&mut a, "sign_list", json!({ "doc": doc }))["signatures"][0];
     assert_eq!((s["status"].as_str(), s["modification"].as_str()), (Some("valid"), Some("allowed")));
-    // A full rewrite is refused for a signed document.
-    assert!(matches!(a.call("doc_save", &json!({ "doc": doc, "path": "copy.pdf", "full": true })), Err(ToolError::Failed(_))));
-    ok(&mut a, "doc_save", json!({ "doc": doc }));
-    // Three revisions: the original, the signature, the comment; the middle one is signed.
+    // Every save is a full rewrite, which would invalidate the signature: refused, in place or not.
+    for args in [json!({ "doc": doc }), json!({ "doc": doc, "path": "copy.pdf", "full": true })] {
+        match a.call("doc_save", &args) {
+            Err(ToolError::Failed(m)) => assert!(m.contains("invalidate its signatures"), "{m}"),
+            other => panic!("saving changes to a signed document must be refused: {other:?}"),
+        }
+    }
+    // The signed file: the unsigned document (rewritten before signing), then the signature.
     let revs = ok(&mut a, "doc_revisions", json!({ "doc": doc }))["revisions"].as_array().cloned().unwrap();
-    assert_eq!(revs.len(), 3, "{revs:?}");
+    assert_eq!(revs.len(), 2, "{revs:?}");
     assert!(revs[0]["signed_by"].as_array().unwrap().is_empty() && revs[1]["signed_by"].as_array().unwrap().len() == 1, "{revs:?}");
     let old = ok(&mut a, "doc_open_revision", json!({ "doc": doc, "revision": 2 }))["doc"].as_u64().unwrap();
     assert_eq!(ok(&mut a, "comment_list", json!({ "doc": old }))["comments"].as_array().map(Vec::len), Some(0), "before the comment");
     assert_eq!(ok(&mut a, "sign_list", json!({ "doc": old }))["count"], 1);
-    assert!(matches!(a.call("doc_open_revision", &json!({ "doc": doc, "revision": 4 })), Err(ToolError::Failed(_))));
+    assert!(matches!(a.call("doc_open_revision", &json!({ "doc": doc, "revision": 3 })), Err(ToolError::Failed(_))));
     assert_eq!(ok(&mut a, "sign_trust", json!({ "clear": true }))["trusted"].as_array().unwrap().len(), 0);
     assert_eq!(ok(&mut a, "sign_list", json!({ "doc": doc }))["signatures"][0]["status"], "unknown");
+    // Accepting that the signature becomes invalid saves a single-revision rewrite,
+    // and the signature is then reported invalid, never valid.
+    ok(&mut a, "doc_save", json!({ "doc": doc, "path": "copy.pdf", "invalidate_signatures": true }));
+    let copy = std::fs::read(dir.join("copy.pdf")).unwrap();
+    assert_eq!(pdfcraft_cos::Document::open(std::sync::Arc::new(copy)).unwrap().revisions().len(), 1);
+    assert_eq!(ok(&mut a, "sign_list", json!({ "doc": doc }))["signatures"][0]["status"], "invalid");
 }
 
 #[test]
@@ -4405,4 +4422,99 @@ fn architectural_and_iso_papers_through_tools() {
     assert!(matches!(bad, Err(ToolError::InvalidArgs(m)) if m.contains("ARCH E1") && m.contains("A0")));
     assert_eq!(std::fs::read(dir.join("plot.pdf")).unwrap(), before);
     assert!(a.call("doc_print", &json!({"doc": doc, "paper": "ARCH D", "path": "../escape.pdf"})).is_err());
+}
+
+/// A one-page PDF whose document information `/Subject` is `subject`.
+fn with_subject(subject: &str) -> Vec<u8> {
+    let objs = [
+        "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 /MediaBox [0 0 200 300] >>".to_string(),
+        "<< /Type /Page /Parent 2 0 R >>".to_string(),
+        format!("<< /Title (Synthetic) /Subject ({subject}) >>"),
+    ];
+    let mut out = b"%PDF-1.7\n".to_vec();
+    let mut offsets = Vec::new();
+    for (i, o) in objs.iter().enumerate() {
+        offsets.push(out.len());
+        out.extend_from_slice(format!("{} 0 obj\n{o}\nendobj\n", i + 1).as_bytes());
+    }
+    let xref = out.len();
+    out.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objs.len() + 1).as_bytes());
+    for o in offsets {
+        out.extend_from_slice(format!("{o:010} 00000 n \n").as_bytes());
+    }
+    out.extend_from_slice(format!("trailer\n<< /Size {} /Root 1 0 R /Info 4 0 R >>\nstartxref\n{xref}\n%%EOF\n", objs.len() + 1).as_bytes());
+    out
+}
+
+/// `canary` is nowhere in the file at `path`: not in its bytes, and not in any object of any
+/// revision as the parser reads it (streams decoded, object streams unpacked). One revision.
+fn assert_clean(path: &Path, canary: &str) {
+    let bytes = std::fs::read(path).unwrap();
+    let needle = canary.as_bytes();
+    let has = |hay: &[u8]| hay.windows(needle.len()).any(|w| w == needle);
+    assert!(!has(&bytes), "{}: raw bytes hold {canary}", path.display());
+    let doc = pdfcraft_cos::Document::open(std::sync::Arc::new(bytes)).unwrap();
+    assert_eq!(doc.revisions().len(), 1, "{}: one revision", path.display());
+    for (r, o) in doc.scan_objects() {
+        let mut text = Vec::new();
+        pdfcraft_cos::serialize(&o, &mut text);
+        assert!(!has(&text), "{}: object {} holds {canary}", path.display(), r.num);
+        if let pdfcraft_cos::Object::Stream(s) = &*o {
+            assert!(!s.decoded().is_ok_and(|d| has(&d)), "{}: stream {} holds {canary}", path.display(), r.num);
+        }
+    }
+}
+
+/// Saving to the document's own file gets the same full rewrite as saving to a new one.
+#[test]
+fn save_in_place_and_save_as_both_leave_removed_content_out() {
+    const CANARY: &str = "OACANARY-AUTOMATION-SUBJECT-4242";
+    let dir = workdir("remanence");
+    std::fs::write(dir.join("client.pdf"), with_subject(CANARY)).unwrap();
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({ "path": "client.pdf" }))["doc"].as_u64().unwrap();
+    ok(&mut a, "doc_set_info", json!({ "doc": doc, "key": "Subject", "value": "" }));
+    let saved = ok(&mut a, "doc_save", json!({ "doc": doc }));
+    assert_eq!(saved["incremental"], false);
+    assert_clean(&dir.join("client.pdf"), CANARY);
+    // Save As from a fresh copy of the original.
+    std::fs::write(dir.join("copy.pdf"), with_subject(CANARY)).unwrap();
+    let copy = ok(&mut a, "doc_open", json!({ "path": "copy.pdf" }))["doc"].as_u64().unwrap();
+    ok(&mut a, "doc_set_info", json!({ "doc": copy, "key": "Subject", "value": "" }));
+    ok(&mut a, "doc_save", json!({ "doc": copy, "path": "out/copy-saved-as.pdf" }));
+    assert_clean(&dir.join("out/copy-saved-as.pdf"), CANARY);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A save whose write fails leaves the existing file exactly as it was, with no staging file.
+#[test]
+fn a_failed_save_leaves_the_existing_file_untouched() {
+    let dir = workdir("failed-save");
+    let target = dir.join("locked.pdf");
+    let original = with_subject("Before the failed save");
+    std::fs::write(&target, &original).unwrap();
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({ "path": "locked.pdf" }))["doc"].as_u64().unwrap();
+    ok(&mut a, "doc_set_info", json!({ "doc": doc, "key": "Subject", "value": "After" }));
+    // Windows refuses to replace a read-only file; elsewhere a read-only folder refuses the
+    // staging file.
+    let locked = if cfg!(windows) { target.clone() } else { dir.clone() };
+    let mut perms = std::fs::metadata(&locked).unwrap().permissions();
+    perms.set_readonly(true);
+    std::fs::set_permissions(&locked, perms.clone()).unwrap();
+    // Some environments (root on Unix) ignore the permission: then there is no failure to test.
+    let enforced =
+        std::fs::OpenOptions::new().write(true).open(&target).is_err() || (!cfg!(windows) && std::fs::write(dir.join("probe"), b"x").is_err());
+    let result = a.call("doc_save", &json!({ "doc": doc }));
+    #[allow(clippy::permissions_set_readonly_false)]
+    perms.set_readonly(false);
+    std::fs::set_permissions(&locked, perms).unwrap();
+    if enforced {
+        assert!(matches!(result, Err(ToolError::Failed(_))), "the save fails: {result:?}");
+        assert_eq!(std::fs::read(&target).unwrap(), original, "the existing file is unchanged");
+        let left: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        assert!(left.iter().all(|n| ["a.pdf", "b.pdf", "locked.pdf"].contains(&n.as_str())), "no staging file is left: {left:?}");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
 }

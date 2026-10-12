@@ -1727,7 +1727,6 @@
 	no such document	Dokument nicht vorhanden
 	nothing to undo	nichts rückgängig zu machen
 	nothing to redo	nichts zu wiederholen
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	dieses Dokument ist signiert: Ein Neuschreiben würde seine Signaturen ungültig machen (speichere es stattdessen inkrementell)
 	the document is protected by a password	das Dokument ist durch ein Passwort geschützt
 	the password is incorrect	das Passwort ist falsch
 	the document has no page tree	das Dokument hat keinen Seitenbaum

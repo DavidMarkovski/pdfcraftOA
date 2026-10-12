@@ -46,12 +46,15 @@ The PDF object graph *is* the model (`crates/engine/README.md` §The editing mod
    overlay. Unknown data is preserved because nothing is rebuilt that wasn't understood.
 2. An edit runs on a clone; on success the previous state goes onto the undo stack. Clones share
    unchanged data, so snapshots are cheap.
-3. After every edit an incremental write produces the working file (original bytes plus one
-   revision); the view is refreshed from those bytes, so what you see is what Save writes.
-4. Saves are incremental and atomic. A full rewrite happens only where it must: redaction, PDF/A
-   conversion, print imposition, a changed password, Save As with garbage collection.
-5. Autosave and crash recovery keep encrypted documents encrypted. Signed documents are protected
-   from rewrites.
+3. After every edit an incremental write produces the in-memory working file (original bytes plus
+   one revision); the view is refreshed from those bytes.
+4. Save and Save As write a full rewrite of the reachable object graph, never an incremental
+   update, so earlier revisions holding removed content are left out (Optimised Accounting fork).
+   The rewrite is checked to reopen as one revision with the same encryption, then written
+   atomically (staged beside the target, flushed, read back, renamed).
+5. Autosave and crash recovery keep encrypted documents encrypted; a document's recovery entry is
+   removed once it is saved. Saving changes to a signed document is refused unless the caller
+   accepts that its signatures become invalid.
 
 ## Rendering and text
 

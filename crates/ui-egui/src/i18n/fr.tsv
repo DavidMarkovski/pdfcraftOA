@@ -1722,7 +1722,6 @@
 	no such document	document introuvable
 	nothing to undo	rien à annuler
 	nothing to redo	rien à rétablir
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	ce document est signé : le réécrire invaliderait ses signatures (enregistrez-le de façon incrémentale)
 	the document is protected by a password	le document est protégé par un mot de passe
 	the password is incorrect	le mot de passe est incorrect
 	the document has no page tree	le document n'a pas d'arbre de pages

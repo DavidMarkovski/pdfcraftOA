@@ -1237,7 +1237,6 @@
 	no such document	δεν υπάρχει τέτοιο έγγραφο
 	nothing to undo	δεν υπάρχει ενέργεια προς αναίρεση
 	nothing to redo	δεν υπάρχει ενέργεια προς επανάληψη
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	το έγγραφο είναι υπογεγραμμένο: η επανεγγραφή του θα ακύρωνε τις υπογραφές του (αποθηκεύστε το με σταδιακή ενημέρωση)
 	the document is protected by a password	το έγγραφο προστατεύεται με κωδικό πρόσβασης
 	the password is incorrect	ο κωδικός πρόσβασης είναι λανθασμένος
 	the document has no page tree	το έγγραφο δεν διαθέτει δομή σελίδων

@@ -87,7 +87,7 @@ Real-world typography: world scripts, vertical Japanese, colour emoji, gradients
 <td width="33%" valign="top">
 
 ### Fearless
-Every save appends your changes and leaves the original bytes untouched. Writes are atomic, undo runs deep, and nothing is lost if you close by mistake.
+Every save writes a full, fresh copy of the document as it is now, intended to leave out earlier revisions that could still hold content you removed. Writes are atomic, undo runs deep, and nothing is lost if you close by mistake.
 
 </td>
 <td width="33%" valign="top">
@@ -168,8 +168,10 @@ Open **Organize pages** to see every page at once:
 **Undo that goes the distance.** Each change is one step in a history you can walk backwards and forwards. The Edit menu names the step ("Undo Rotate pages"), and undo still works after you save.
 
 **Saves you can trust:**
-- *Incremental:* the original bytes stay byte-for-byte intact.
-- *Atomic:* the file is written to a temporary copy, then swapped in.
+- *Full rewrite:* Save and Save As write only the objects the document still uses, never an update appended to the old file. This is intended to exclude earlier revisions and unreferenced objects that could still hold deleted or replaced text, pages, images, comments, attachments, form values or metadata. It is not secure erasure: earlier copies of the file on disk, in backups or in other applications are not touched.
+- *Atomic:* the file is written to a temporary copy, read back and checked, then swapped in. If anything fails, the existing file is left as it was.
+- *Protection kept:* a password-protected document is saved with the same encryption and permissions, or not saved at all.
+- *Signed documents:* a rewrite invalidates digital signatures, so saving changes to a signed document is refused.
 - *Verified:* independently checked with qpdf.
 
 When open documents exceed the window width, scroll over the tab strip with the mouse wheel or trackpad, or use its horizontal scrollbar. Opening or switching to a document brings its tab into view.
@@ -299,7 +301,7 @@ Every engine feature is reachable without the GUI, through one table of JSON-Sch
 
 - **The Rust API** (`pdfcraft_automation::Automation::call`), for embedding.
 
-Edits stay in memory, undoable, until `doc_save`. Saving to the same file appends an incremental update, so the original bytes are preserved, and the write is atomic. Unsaved changes are never discarded silently.
+Edits stay in memory, undoable, until `doc_save`. Saving, to the same file or a new one, writes a full rewrite rather than an incremental update, intended to leave out earlier revisions that could hold removed content, and the write is atomic. Changes to a signed document are refused unless `invalidate_signatures: true` accepts that its signatures become invalid. Unsaved changes are never discarded silently.
 
 ### Driving the app itself
 
