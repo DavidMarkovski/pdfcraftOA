@@ -50,7 +50,9 @@ fn about_dialog_shows_the_brand_and_links() {
         app.open_bytes("one.pdf", None, pdf.to_vec()).unwrap();
         app.dialog = Some(Dialog::About);
     });
-    assert!(h.query_all_by_label("ArtCraft").count() >= 2, "the mark and the wordmark (alt text)");
+    assert!(h.query_by_label("Optimised PDF").is_some(), "the Optimised PDF mark (alt text)");
+    assert!(h.query_by_label("ArtCraft").is_none(), "upstream's ArtCraft marks are gone (their licence: forks remove them)");
+    assert!(h.query_by_label_contains("Based on PdfCraft by the ArtCraft team").is_some(), "upstream credited in plain text");
     h.get_by_label("Join our Discord").click();
     h.run_steps(2);
     assert_eq!(h.state().last_opened_url.as_deref(), Some(links::DISCORD));
