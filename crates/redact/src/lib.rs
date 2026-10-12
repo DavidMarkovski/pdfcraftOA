@@ -40,7 +40,7 @@ pub enum RedactError {
     /// A mark's overlay text has a character Helvetica can't draw; nothing was redacted.
     #[error("{0}")]
     Undrawable(String),
-    #[error("page {0} has vertical-writing text under a redaction mark, which PdfCraft cannot remove yet, so nothing was changed")]
+    #[error("page {0} has vertical-writing text under a redaction mark, which Optimised PDF cannot remove yet, so nothing was changed")]
     VerticalText(usize),
     #[error(transparent)]
     Edit(#[from] pdfcraft_edit::EditError),

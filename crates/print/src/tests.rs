@@ -567,7 +567,7 @@ fn the_print_script_renders_the_job_and_reaches_the_spooler() {
     let dry = spool::windows_submit(&pdf, &job, &[("PDFCRAFT_PRINT_DRYRUN", "1")]);
     assert_eq!(dry.as_deref(), Ok("rendered 2 sheet(s)"), "{dry:?}");
 
-    const NAME: &str = "PdfCraft Test Print";
+    const NAME: &str = "Optimised PDF Test Print";
     let added = windows_powershell(
         &format!(
             "if (-not (Get-Printer -Name '{NAME}' -ErrorAction SilentlyContinue)) {{ Add-Printer -Name '{NAME}' -DriverName 'Generic / Text Only' -PortName 'FILE:' }}; Set-Printer -Name '{NAME}' -IsPaused $true"
@@ -581,10 +581,11 @@ fn the_print_script_renders_the_job_and_reaches_the_spooler() {
     let job = Job { printer: Some(NAME.into()), title: "test.pdf".into(), ..Job::default() };
     let sent = spool::submit(&pdf, &job);
     let queued = windows_powershell(
-        "if (Get-PrintJob -Name 'PdfCraft Test Print') { (Get-PrintJob -Name 'PdfCraft Test Print' | Measure-Object).Count } else { 0 }",
+        "if (Get-PrintJob -Name 'Optimised PDF Test Print') { (Get-PrintJob -Name 'Optimised PDF Test Print' | Measure-Object).Count } else { 0 }",
         &[],
     );
-    let cleaned = windows_powershell("Get-PrintJob -Name 'PdfCraft Test Print' | Remove-PrintJob; Remove-Printer -Name 'PdfCraft Test Print'", &[]);
+    let cleaned =
+        windows_powershell("Get-PrintJob -Name 'Optimised PDF Test Print' | Remove-PrintJob; Remove-Printer -Name 'Optimised PDF Test Print'", &[]);
     assert!(sent.is_ok(), "{sent:?}");
     assert_eq!(queued.as_deref().map(str::trim), Ok("1"), "the job is in the paused printer's queue: {queued:?}");
     assert!(cleaned.is_ok(), "the test printer is removed again: {cleaned:?}");

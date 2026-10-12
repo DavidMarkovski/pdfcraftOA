@@ -1,0 +1,22 @@
+Optimised Accounting brand assets: licence
+
+The Optimised Accounting name and logo, the "Optimised PDF" name, and the mark drawn from that logo
+(the "Optimised Accounting Marks") are owned by Optimised Accounting Pty Ltd. This covers
+docs/brand/optimised-pdf-mark.svg and the application icon in assets/app-icon/ (pdfcraft.svg,
+pdfcraft-small.svg and every file derived from them: pdfcraft-1024.png, pdfcraft.icns,
+pdfcraft.ico and hicolor/), in every colour, size and format.
+
+The Optimised Accounting Marks are trademarks and are NOT open source. They are not covered by the
+MIT OR Apache-2.0 licence of the source code in this repository, and nothing in that licence, in
+NOTICE or in any other file of this repository grants any right to them.
+
+Optimised Accounting Pty Ltd permits them to be used, unmodified, only within Optimised PDF (this
+repository, its documentation and builds made from it by or for Optimised Accounting Pty Ltd) to
+identify it. Anyone else who distributes or publishes a version of this software must remove them
+or replace them with their own, and must not call it Optimised PDF.
+
+All other rights are reserved. Any other use needs prior written permission from Optimised
+Accounting Pty Ltd.
+
+Optimised PDF is based on PdfCraft by the ArtCraft team (https://github.com/storytold/pdfcraft),
+whose source code is licensed under either of the Apache License, Version 2.0 or the MIT licence.

@@ -1339,7 +1339,7 @@ fn signing_with_windows_store_identities() {
     getrandom::fill(&mut random).unwrap();
     let unique: String = random.iter().map(|b| format!("{b:02x}")).collect();
     for algorithm in ["RSA", "ECDSA_nistP256", "ECDSA_nistP384"] {
-        let name = format!("PdfCraft Test {unique} {algorithm}");
+        let name = format!("Optimised PDF Test {unique} {algorithm}");
         let rsa = if algorithm == "RSA" { "-KeyLength 2048" } else { "" };
         let out = powershell(&format!(
             "$ErrorActionPreference='Stop'; $c=New-SelfSignedCertificate -Subject 'CN={name}' -CertStoreLocation 'Cert:\\CurrentUser\\My' -Provider 'Microsoft Software Key Storage Provider' -KeyAlgorithm {algorithm} {rsa} -KeyUsage DigitalSignature -KeyExportPolicy NonExportable; $c.Thumbprint"
@@ -1400,7 +1400,7 @@ fn a_windows_store_identity_signs_with_its_issuers() {
     let mut random = [0u8; 16];
     getrandom::fill(&mut random).unwrap();
     let unique: String = random.iter().map(|b| format!("{b:02x}")).collect();
-    let [root, issuer, signer] = ["Root", "Issuer", "Signer"].map(|role| format!("PdfCraft Test {unique} {role}"));
+    let [root, issuer, signer] = ["Root", "Issuer", "Signer"].map(|role| format!("Optimised PDF Test {unique} {role}"));
     let mut create = |name: &str, signed_by: Option<&str>, extra: &str| {
         let by = signed_by.map(|t| format!("-Signer (Get-Item -LiteralPath 'Cert:\\CurrentUser\\My\\{t}')")).unwrap_or_default();
         let out = powershell(&format!(

@@ -1,0 +1,9 @@
+<!-- Optimised Accounting mark, redrawn as a vector from the company logo.
+     Trademark of Optimised Accounting Pty Ltd, all rights reserved; not licensed for reuse.
+     See docs/brand/LICENSE-optimised-accounting.txt and ATTRIBUTION.toml. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="91" fill="#3a414a"/>
+  <circle cx="100" cy="100" r="69.5" fill="#ffffff"/>
+  <circle cx="100" cy="100" r="54" fill="none" stroke="#26a7e0" stroke-width="15"/>
+  <rect x="146.5" y="41" width="15" height="118" fill="#26a7e0"/>
+</svg>

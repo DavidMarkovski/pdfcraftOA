@@ -601,7 +601,7 @@ impl Emitter<'_> {
                         const PREFIX: &str = "some of the form's text has characters the standard fonts can't draw";
                         if !self.warnings.iter().any(|w| w.starts_with(PREFIX)) {
                             self.warnings.push(format!(
-                                "{PREFIX} (the first is \"{}\" (U+{:04X})); they are shown as ? until PdfCraft can embed fonts for them",
+                                "{PREFIX} (the first is \"{}\" (U+{:04X})); they are shown as ? until Optimised PDF can embed fonts for them",
                                 c.escape_debug(),
                                 u32::from(c)
                             ));

@@ -42,7 +42,7 @@ pub struct Job {
 
 impl Default for Job {
     fn default() -> Self {
-        Job { printer: None, copies: 1, collate: true, duplex: Duplex::Off, grayscale: false, title: "PdfCraft".into(), options: Vec::new() }
+        Job { printer: None, copies: 1, collate: true, duplex: Duplex::Off, grayscale: false, title: "Optimised PDF".into(), options: Vec::new() }
     }
 }
 
@@ -133,7 +133,7 @@ fn name_label(s: &str) -> (&str, &str) {
 }
 
 /// The job options a PPD offers, in file order, without the installable-hardware group and the
-/// options PdfCraft sets itself ([`HANDLED_OPTIONS`]). Lenient: malformed lines are skipped.
+/// options Optimised PDF sets itself ([`HANDLED_OPTIONS`]). Lenient: malformed lines are skipped.
 pub fn parse_ppd(ppd: &str) -> Vec<PrinterOption> {
     let mut out: Vec<PrinterOption> = Vec::new();
     let (mut group, mut group_key) = (String::new(), String::new());
