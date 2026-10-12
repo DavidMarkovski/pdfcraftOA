@@ -1793,7 +1793,6 @@
 	no such document	нет такого документа
 	nothing to undo	нечего отменить
 	nothing to redo	нечего повторить
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	этот документ подписан: перезапись сделает его подписи недействительными (сохраняйте инкрементально)
 	the document is protected by a password	документ защищён паролем
 	the password is incorrect	пароль неверен
 	the document has no page tree	у документа нет дерева страниц

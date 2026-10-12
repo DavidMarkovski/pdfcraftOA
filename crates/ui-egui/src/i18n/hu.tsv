@@ -1712,7 +1712,6 @@
 	no such document	nincs ilyen dokumentum
 	nothing to undo	nincs mit visszavonni
 	nothing to redo	nincs mit megismételni
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	ez a dokumentum alá van írva: az újraírás érvénytelenítené az aláírásait (inkább növekményesen mentsd)
 	the document is protected by a password	a dokumentum jelszóval védett
 	the password is incorrect	a jelszó hibás
 	the document has no page tree	a dokumentumnak nincs oldalfája

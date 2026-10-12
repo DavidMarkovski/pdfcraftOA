@@ -399,7 +399,9 @@ fn an_earlier_revision_opens_from_document_properties() {
         let s = h.state_mut();
         let id = s.views[s.active.unwrap()].id;
         s.session.apply(id, Edit::SetInfo { key: "Title".into(), value: "Second".into() }).unwrap();
-        let bytes = s.session.save_bytes(id).unwrap();
+        // A file with an earlier revision. Save writes one revision, so take the working file:
+        // the original plus the update appended in memory.
+        let bytes = s.session.get(id).unwrap().bytes.clone();
         s.open_bytes("updated.pdf", None, bytes.to_vec()).unwrap();
     }
     h.run_steps(2);

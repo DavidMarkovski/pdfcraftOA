@@ -1842,7 +1842,6 @@ key	Space	Mezerník
 	no such document	takový dokument neexistuje
 	nothing to undo	není co vrátit zpět
 	nothing to redo	není co provést znovu
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	tento dokument je podepsaný: přepsáním by jeho podpisy přestaly platit (uložte ho raději přírůstkově)
 	the document is protected by a password	dokument je chráněný heslem
 	the password is incorrect	heslo je nesprávné
 	the document has no page tree	dokument nemá strom stránek

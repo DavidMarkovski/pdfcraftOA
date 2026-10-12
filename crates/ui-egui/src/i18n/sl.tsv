@@ -2010,7 +2010,6 @@
 	the title must not be empty	naslov ne sme biti prazen
 	there are no pages to print	ni strani za tiskanje
 	there are no redaction marks to apply	ni oznak za počrnitev, ki bi jih bilo mogoče uveljaviti
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	ta dokument je podpisan: prepis bi razveljavil njegove podpise (namesto tega ga shranite inkrementalno)
 	this file isn't XFDF, FDF, XML or text form data	ta datoteka ni podatkov obrazca XFDF, FDF, XML ali besedilnih
 	to	do
 	to {n}	do {n}

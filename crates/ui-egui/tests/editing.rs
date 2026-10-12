@@ -368,7 +368,7 @@ fn insert_blank_page_after_selection() {
 }
 
 #[test]
-fn save_writes_an_incremental_update_and_clears_dirty() {
+fn save_writes_a_full_rewrite_and_clears_dirty() {
     let out = temp_path("saved.pdf");
     let original = fixture(3);
     let target = out.to_string_lossy().into_owned();
@@ -381,13 +381,24 @@ fn save_writes_an_incremental_update_and_clears_dirty() {
     h.key_press_modifiers(Modifiers::COMMAND, Key::S);
     h.run_steps(3);
     let saved = std::fs::read(&out).expect("file written");
-    assert_eq!(&saved[..original.len()], &original[..], "original bytes untouched");
+    assert!(!saved.starts_with(&original), "a full rewrite, not an update appended to the original");
+    let revisions = |bytes: &[u8]| pdfcraft_cos::Document::open(std::sync::Arc::new(bytes.to_vec())).unwrap().revisions().len();
+    assert_eq!(revisions(&saved), 1);
     assert!(!dirty(&h));
     h.get_by_label("saved.pdf"); // the tab takes the new name, no edited marker
     // What was written is what the app now shows.
     assert_eq!(h.state().session.get(h.state().views[0].id).unwrap().bytes.as_slice(), saved.as_slice());
-    let reopened = pdfcraft_render::inspect(std::sync::Arc::new(saved), None).unwrap();
+    let reopened = pdfcraft_render::inspect(std::sync::Arc::new(saved.clone()), None).unwrap();
     assert_eq!(reopened.pages[2].rotation, 270);
+    // Saving again to the same file is a full rewrite too, not an update appended to it.
+    h.get_by_label("Rotate counterclockwise").click();
+    h.run_steps(3);
+    h.key_press_modifiers(Modifiers::COMMAND, Key::S);
+    h.run_steps(3);
+    let again = std::fs::read(&out).expect("file written");
+    assert!(!again.starts_with(&saved));
+    assert_eq!(revisions(&again), 1);
+    assert_eq!(pdfcraft_render::inspect(std::sync::Arc::new(again), None).unwrap().pages[2].rotation, 180);
     let _ = std::fs::remove_file(out);
 }
 
@@ -2462,7 +2473,8 @@ fn save_paragraph_drag(h: &mut Harness<'static, PdfCraftApp>, name: &str, origin
     h.key_press_modifiers(Modifiers::COMMAND, Key::S);
     h.run_steps(4);
     let saved = std::fs::read(&out).unwrap();
-    assert!(saved.starts_with(original), "Save keeps the opened/saved revisions");
+    assert!(!saved.starts_with(original), "Save is a full rewrite, not an update appended to the file");
+    assert_eq!(pdfcraft_cos::Document::open(std::sync::Arc::new(saved.clone())).unwrap().revisions().len(), 1);
     assert!(!h.state().session.get(id).unwrap().dirty);
     assert_eq!(h.state().session.get(id).unwrap().bytes.as_slice(), saved.as_slice());
     std::fs::remove_file(out).unwrap();

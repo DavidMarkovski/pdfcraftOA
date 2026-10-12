@@ -132,7 +132,7 @@ pub fn tools() -> Vec<ToolDef> {
         t(
             "doc_save",
             "Save a document",
-            "Save to its own file (an incremental update, which keeps signatures valid) or to a new path (a full rewrite). The write is atomic. flatten_fill_sign bakes Fill & Sign text, marks and signatures into the page first and removes those annotations; other comments and form fields stay. Omit it, or pass false, to leave them editable.",
+            "Save to its own file or to a new path. Every save is a full rewrite of the objects the document still uses, intended to leave out earlier revisions that may hold removed content; it is never an incremental update. The rewrite is checked to reopen with the same encryption before it atomically replaces the file. A signed document with changes is refused, because the rewrite would invalidate its signatures, unless invalidate_signatures is true. flatten_fill_sign bakes Fill & Sign text, marks and signatures into the page first and removes those annotations; other comments and form fields stay. Omit it, or pass false, to leave them editable.",
         )
         .destructive()
         .cmd("file.save")
@@ -140,7 +140,8 @@ pub fn tools() -> Vec<ToolDef> {
             json!({
                 "doc": doc(),
                 "path": { "type": "string", "description": "Save as this file. Omit to save in place." },
-                "full": { "type": "boolean", "description": "Force a full rewrite (or, with false, an incremental update)." },
+                "full": { "type": "boolean", "description": "Accepted for compatibility: every save is a full rewrite. false (an incremental update) is refused." },
+                "invalidate_signatures": { "type": "boolean", "description": "Save a signed document's changes anyway, accepting that its existing signatures become invalid. Default false (refused)." },
                 "flatten_fill_sign": { "type": "boolean", "description": "Bake Fill & Sign marks into the page before writing. Default false." }
             }),
             &["doc"],

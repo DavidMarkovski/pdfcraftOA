@@ -2018,7 +2018,6 @@
 	The title in the metadata and the document information differ	Заглавието в метаданните и в информацията за документа се различават
 	the title must not be empty	заглавието не може да е празно
 	there are no pages to print	няма страници за печат
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	този документ е подписан: презаписването му би обезсилило подписите (вместо това го запишете инкрементално)
 	this file isn't XFDF, FDF, XML or text form data	този файл не е XFDF, FDF, XML или текстови данни на формуляр
 	This page couldn't be displayed.\n{e}	Тази страница не може да бъде показана.\n{e}
 	Type your {what}.	Въведете {what}.

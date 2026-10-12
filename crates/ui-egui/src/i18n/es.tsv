@@ -1796,7 +1796,6 @@
 	no such document	no existe ese documento
 	nothing to undo	nada que deshacer
 	nothing to redo	nada que rehacer
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	este documento está firmado: reescribirlo invalidaría sus firmas (guárdalo de forma incremental)
 	the document is protected by a password	el documento está protegido con contraseña
 	the password is incorrect	la contraseña es incorrecta
 	the document has no page tree	el documento no tiene árbol de páginas

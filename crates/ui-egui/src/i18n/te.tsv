@@ -1715,7 +1715,6 @@ action wizard	Start	ప్రారంభించు
 	no such document	అటువంటి పత్రం లేదు
 	nothing to undo	రద్దు చేయడానికి ఏమీ లేదు
 	nothing to redo	మళ్లీ చేయడానికి ఏమీ లేదు
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	ఈ పత్రంపై సంతకం చేయబడింది: దీన్ని పూర్తిగా మళ్లీ రాస్తే దాని సంతకాలు చెల్లకుండా పోతాయి (బదులుగా దీన్ని ఇంక్రిమెంటల్‌గా సేవ్ చేయండి)
 	the document is protected by a password	పత్రం పాస్‌వర్డ్‌తో రక్షించబడింది
 	the password is incorrect	పాస్‌వర్డ్ తప్పు
 	the document has no page tree	పత్రంలో పేజీ ట్రీ లేదు

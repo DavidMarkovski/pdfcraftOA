@@ -1790,7 +1790,6 @@
 	no such document	такого документа немає
 	nothing to undo	немає дій для скасування
 	nothing to redo	немає дій для повторення
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	цей документ підписано: перезапис зробить підписи недійсними (натомість збережіть поступово)
 	the document is protected by a password	документ захищено паролем
 	the password is incorrect	неправильний пароль
 	the document has no page tree	документ не має дерева сторінок

@@ -1803,7 +1803,6 @@
 	no such document	文書がありません
 	nothing to undo	取り消す操作はありません
 	nothing to redo	やり直す操作はありません
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	この文書は署名済みです。書き直すと署名が無効になります（代わりに増分保存してください）
 	the document is protected by a password	文書はパスワードで保護されています
 	the password is incorrect	パスワードが正しくありません
 	the document has no page tree	文書にページツリーがありません

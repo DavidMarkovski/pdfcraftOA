@@ -2028,7 +2028,6 @@
 	The title in the metadata and the document information differ	元数据与文档信息中的标题不一致
 	the title must not be empty	标题不能为空
 	there are no pages to print	没有可打印的页面
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	此文档已签名：重写文件会使签名失效（请改用增量保存）
 	this file isn't XFDF, FDF, XML or text form data	此文件不是 XFDF、FDF、XML 或文本格式的表单数据
 	This page couldn't be displayed.\n{e}	无法显示此页面。\n{e}
 	Type your {what}.	请输入您的{what}。

@@ -1692,7 +1692,6 @@
 	no such document	böyle bir belge yok
 	nothing to undo	geri alınacak bir şey yok
 	nothing to redo	yinelenecek bir şey yok
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	bu belge imzalanmış: yeniden yazılması imzalarını geçersiz kılar (bunun yerine aşamalı olarak kaydedin)
 	the document is protected by a password	belge bir parola ile korunuyor
 	the password is incorrect	parola yanlış
 	the document has no page tree	belgenin sayfa ağacı yok

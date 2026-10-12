@@ -1792,7 +1792,6 @@
 	no such document	لا يوجد مستند كهذا
 	nothing to undo	لا شيء للتراجع عنه
 	nothing to redo	لا شيء لإعادته
-	this document is signed: rewriting it would invalidate its signatures (save it incrementally instead)	هذا المستند موقَّع: إعادة كتابته ستبطل توقيعاته (احفظه حفظًا تزايديًا بدلًا من ذلك)
 	the document is protected by a password	المستند محمي بكلمة مرور
 	the password is incorrect	كلمة المرور غير صحيحة
 	the document has no page tree	المستند ليس له شجرة صفحات
