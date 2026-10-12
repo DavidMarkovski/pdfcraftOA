@@ -62,7 +62,7 @@ In order. Each item names its entry in [gaps.md](gaps.md).
    missing languages (gap 14), keyboard-only operation, a screen-reader audit.
 
 Decided against for now (owner, 2026-10-05): self-installing updates and an update check at start.
-Help ▸ Check for updates is manual only.
+Help ▸ Check for updates is removed in the Optimised PDF fork (it pointed at upstream releases).
 
 ## Milestones
 

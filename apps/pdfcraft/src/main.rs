@@ -36,7 +36,6 @@ mod logging;
 mod reopen;
 mod single_instance;
 mod text_scale;
-mod updates;
 #[cfg(test)]
 #[path = "windows_manifest.rs"]
 mod windows_manifest;
@@ -312,7 +311,8 @@ fn app_creator<'a>(
         }
         app.integrated_titlebar = integrated;
         app.system_text_scale = text_scale::system();
-        app.update_source = Some(std::sync::Arc::new(updates::latest_release));
+        // No update source: Optimised PDF doesn't check for updates. Upstream PdfCraft's releases
+        // would replace this version, so Help ▸ Check for updates was removed too.
         app.printer_source = Some(pdfcraft_ui_egui::system_printers());
         app.os_key_store_ids = cfg!(any(target_os = "macos", target_os = "windows"));
         #[cfg(target_os = "macos")]
